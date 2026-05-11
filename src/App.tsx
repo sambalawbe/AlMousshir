@@ -69,10 +69,14 @@ export default function App() {
     setLoading(true);
 
     try {
-      const history = messages.map(m => ({
-        role: m.role,
-        parts: [m.content]
-      }));
+      // startChat context: history must alternate user/model.
+      // We skip the 'welcome' message which is purely for UI and starts with 'model'.
+      const history = messages
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({
+          role: m.role as "user" | "model",
+          parts: [m.content]
+        }));
 
       const interpretation = await interpretDream(input, history);
       
