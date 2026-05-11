@@ -11,18 +11,43 @@ interface Message {
   content: string;
 }
 
+const STORAGE_KEY = 'al_mousshir_history';
+
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'model',
-      content: "Bienvenue. Je suis Al-Mousshir, votre guide dans l'univers mystique des songes selon les enseignements d'Ibn Sirine. Racontez-moi votre rêve, et nous chercherons ensemble sa signification cachée."
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load history on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setMessages(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load history", e);
+      }
+    } else {
+      // Default welcome message
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'model',
+          content: "Bienvenue. Je suis Al-Mousshir, votre guide dans l'univers mystique des songes selon les enseignements d'Ibn Sirine. Racontez-moi votre rêve, et nous chercherons ensemble sa signification cachée."
+        }
+      ]);
+    }
+  }, []);
+
+  // Save history on changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -72,7 +97,14 @@ export default function App() {
   };
 
   const clearChat = () => {
-    setMessages([messages[0]]);
+    const welcome = messages.find(m => m.id === 'welcome') || {
+      id: 'welcome',
+      role: 'model',
+      content: "Bienvenue. Je suis Al-Mousshir, votre guide dans l'univers mystique des songes selon les enseignements d'Ibn Sirine. Racontez-moi votre rêve, et nous chercherons ensemble sa signification cachée."
+    };
+    const resetMessages = [welcome as Message];
+    setMessages(resetMessages);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
