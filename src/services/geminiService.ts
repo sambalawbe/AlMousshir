@@ -29,27 +29,30 @@ PRINCIPES CLÉS D'IBN SIRINE (SYNTHÈSE) :
 Si l'utilisateur pose une question qui n'est pas liée aux rêves, redirige-le poliment vers ton expertise onirique.
 `;
 
-export async function interpretDream(dreamDescription: string, chatHistory: {role: "user" | "model", parts: string[]}[] = []) {
+export async function interpretDream(dreamDescription: string, chatHistory: any[] = []) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("Clé API Gemini manquante. Veuillez la configurer dans les paramètres.");
   }
 
-  const ai = new GoogleGenAI(apiKey);
-  const model = ai.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-    systemInstruction: IBN_SIRIN_CONTEXT
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: [
+      ...chatHistory.map((h: any) => ({
+        role: h.role === "model" ? "model" : "user",
+        parts: [{ text: h.parts[0] }]
+      })),
+      { role: "user", parts: [{ text: dreamDescription }] }
+    ],
+    config: {
+      systemInstruction: IBN_SIRIN_CONTEXT,
+      temperature: 0.7,
+      topP: 0.95,
+      topK: 40,
+    },
   });
 
-  // Convert history for the chat session
-  const chat = model.startChat({
-    history: chatHistory.map(h => ({
-      role: h.role === "model" ? "model" : "user",
-      parts: [{ text: h.parts[0] }]
-    }))
-  });
-
-  const result = await chat.sendMessage(dreamDescription);
-  const response = await result.response;
-  return response.text();
+  return response.text;
 }
