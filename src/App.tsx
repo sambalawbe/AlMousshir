@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Moon, Sparkles, BookOpen, User, Info, Loader2, RefreshCcw } from 'lucide-react';
+import { Send, Moon, Sparkles, BookOpen, User, Info, Loader2, RefreshCcw, Mic, MicOff, Volume2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from './lib/utils';
 import { interpretDream } from './services/geminiService';
@@ -17,7 +17,10 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Load history on mount
   useEffect(() => {
@@ -53,6 +56,63 @@ export default function App() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'fr-FR';
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error("Speech recognition already started or not supported");
+      }
+    }
+  };
+
+  const speak = (text: string, messageId: string) => {
+    if (isSpeaking === messageId) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.onend = () => setIsSpeaking(null);
+    setIsSpeaking(messageId);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -180,12 +240,24 @@ export default function App() {
                 </div>
                 
                 <div className={cn(
-                  "relative max-w-[85%] px-6 py-4 rounded-3xl glass shadow-xl",
+                  "relative max-w-[85%] px-6 py-4 rounded-3xl glass shadow-xl group/msg",
                   m.role === 'user' ? "rounded-tr-none text-white/90 border-accent/30" : "rounded-tl-none border-white/5"
                 )}>
                   <div className="markdown-body">
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
+                  {m.role === 'model' && (
+                    <button 
+                      onClick={() => speak(m.content, m.id)}
+                      className={cn(
+                        "absolute -bottom-6 left-2 p-1.5 rounded-full glass border-white/10 opacity-0 group-hover/msg:opacity-100 transition-all hover:bg-gold/20 hover:text-gold",
+                        isSpeaking === m.id && "opacity-100 text-gold bg-gold/20"
+                      )}
+                      title="Écouter l'interprétation"
+                    >
+                      <Volume2 className={cn("w-3.5 h-3.5", isSpeaking === m.id && "animate-pulse")} />
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -234,10 +306,24 @@ export default function App() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Décrivez votre rêve..."
-              className="flex-1 bg-transparent border-none outline-none py-4 text-white placeholder:text-white/30 text-base"
+              placeholder={isListening ? "J'écoute..." : "Décrivez votre rêve..."}
+              className={cn(
+                "flex-1 bg-transparent border-none outline-none py-4 text-white placeholder:text-white/30 text-base transition-all",
+                isListening && "placeholder:text-gold animate-pulse"
+              )}
               disabled={loading}
             />
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={cn(
+                "p-3 rounded-2xl transition-all mr-1",
+                isListening ? "bg-red-500 text-white animate-pulse" : "text-white/40 hover:text-gold hover:bg-white/5"
+              )}
+              title="Parler"
+            >
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
             <button
               type="submit"
               disabled={!input.trim() || loading}

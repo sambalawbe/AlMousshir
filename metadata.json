@@ -1,6 +1,6 @@
 {
   "name": "Al-Mousshir: Interprétation des Rêves",
   "description": "Un chatbot spécialisé dans l'interprétation des rêves selon les enseignements d'Ibn Sirine, basé sur son ouvrage classique.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": []
 }
