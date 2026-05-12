@@ -121,8 +121,19 @@ export default function App() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 glass z-10 border-b border-white/5 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gold/20 rounded-xl">
-            <Moon className="w-6 h-6 text-gold" />
+          {/* Emplacement du Logo: Remplacez src="/logo.png" par le chemin de votre image */}
+          <div className="relative group/logo">
+            <img 
+              src="/logo.png" 
+              alt="Logo Al-Mousshir" 
+              className="w-10 h-10 object-contain hidden border border-white/10 rounded-lg p-1 bg-white/5 group-hover/logo:border-gold/30 transition-all"
+              id="app-logo"
+              onLoad={(e) => e.currentTarget.classList.remove('hidden')}
+              onError={(e) => e.currentTarget.classList.add('hidden')}
+            />
+            <div className="p-2 bg-gold/20 rounded-xl" id="logo-icon-fallback">
+              <Moon className="w-6 h-6 text-gold" />
+            </div>
           </div>
           <div>
             <h1 className="text-xl font-serif font-bold tracking-tight text-white/90">Al-Mousshir</h1>
